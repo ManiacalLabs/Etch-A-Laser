@@ -2,23 +2,15 @@ import sys
 import time
 import os
 import traceback
-try:
-    import serial
-    import serial.tools.list_ports
-except ImportError as e:
-    error = "Please install pyserial 2.7+! pip install pyserial"
-    raise ImportError(error)
 
-CMD = 12
+import serial
+import serial.tools.list_ports
 
 class Serial(object):
-    foundDevices = []
-    deviceIDS = {}
-    deviceVers = []
-
-    def __init__(self, dev="", hardwareID=None):
+    def __init__(self, dev="", hardwareID=None, baud=115200):
 
         self._hardwareID = hardwareID
+        self.baud = baud
         self._com = None
         self.dev = dev
 
@@ -31,41 +23,24 @@ class Serial(object):
             print("Closing connection to: %s", self.dev)
             self._com.close()
 
-    @staticmethod
-    def findSerialDevices(hardwareID):
+    def findSerialDevices(self, hardwareID):
         hardwareID = "(?i)" + hardwareID  # forces case insensitive
-        if len(Serial.foundDevices) == 0:
-            Serial.foundDevices = []
-            Serial.deviceIDS = {}
-            for port in serial.tools.list_ports.grep(hardwareID):
-                Serial.foundDevices.append(port[0])
+        foundDevices = []
+        for port in serial.tools.list_ports.grep(hardwareID):
+            foundDevices.append(port[0])
 
-        return Serial.foundDevices
+        return foundDevices
 
     def _connect(self):
         try:
             if(self.dev == "" or self.dev is None):
-                Serial.findSerialDevices(self._hardwareID)
-
-                self.dev = Serial.foundDevices[0]
+                self.dev = self.findSerialDevices(self._hardwareID)[0]
 
                 print("Using COM Port: {}".format(self.dev))
 
-            try:
-                self._com = serial.Serial(self.dev, timeout=5)
-            except serial.SerialException as e:
-                ports = Serial.findSerialDevices(self._hardwareID)
-                error = "Invalid port specified. No COM ports available."
-                if len(ports) > 0:
-                    error = "Invalid port specified. Try using one of: \n" + \
-                        "\n".join(ports)
-                print(error)
-                raise Exception(error)
+            self._com = serial.Serial(self.dev, baudrate=self.baud, timeout=5)
 
-            self._com.write(b'x')
-
-            resp = self._com.readline()
-            return bool(resp)
+            return True
 
         except serial.SerialException as e:
             error = "Unable to connect to the device. Please check that it is connected and the correct port is selected."
@@ -73,30 +48,28 @@ class Serial(object):
             print(error)
             raise e
 
-    @staticmethod
-    def _generateHeader(cmd):
-        packet = bytearray()
-        packet.append(cmd)
-        return packet
+    def write(self, data, nl=True):
+        if nl and not data.endswith('\n'):
+            data += '\n'
+        self._com.write(data.encode('utf-8'))
 
-    def readline(self, cmd=None, data=None):
-        # packet = None
-        # if cmd:
-        #     packet = Serial._generateHeader(cmd)
-        #     if data:
-        #         packet.extend(data)
-
-        # if packet:
-        #     self._com.write(packet)
-
-        self._com.write(b'x')
+    def readline(self):
         resp = self._com.readline()
+        return resp.decode()
 
-        return resp
+class Encoder(Serial):
+    def __init__(self):
+        super().__init__(hardwareID="16C0:0483")
 
+        self.read()  # read once to reset state
 
+    def read(self):
+        self.write('c', False)
+        resp = self.readline().strip()
+        try:
+            deltas = resp.split(',')
+            return (int(deltas[0]), int(deltas[1]))
+        except:
+            print('Error reading encoder values')
+            return (0,0)
 
-# class DriverTeensySmartMatrix(Serial):
-#     def __init__(self, width, height, dev="", deviceID=None, hardwareID="16C0:0483"):
-#         super(DriverTeensySmartMatrix, self).__init__(type=LEDTYPE.GENERIC, num=width * height, deviceID=deviceID, hardwareID=hardwareID)
-#         self.sync = self._sync
