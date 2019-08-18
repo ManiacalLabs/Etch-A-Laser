@@ -12,7 +12,7 @@ from grbl import grbl
 
 MACHINE_CFG = {
     "size": None,           # X,Y dimensions in mm, None to autodetect
-    "spm": 100,             # encoder steps per mm movement
+    "spm": 200,             # encoder steps per mm movement
     "inc": 0.01,            # constrain move values to this increment
     "power": 0.1,          # default power level (0.0 - 1.0)
     "speed": 5000,          # default movement speed,
@@ -37,8 +37,11 @@ high_sensitivity()
 
 @nav.on(nav.CANCEL)
 def handle_cancel(ch, evt):
-    # re-home
-    pass
+    lcd.set_cursor_position(0, 0)
+    lcd.write(pad_text('Homing...'))
+    con.home()
+    lcd.set_cursor_position(0, 0)
+    lcd.write(pad_text('Complete!'))
 
 
 @nav.on(nav.UP)
@@ -74,7 +77,7 @@ def pad_text(txt):
         p = 16 - len(txt)
         txt += " " * p
 
-    return txt[0:15]
+    return txt[0:16]
 
 def write_pos_line():
     lcd.set_cursor_position(0, 0)
