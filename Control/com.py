@@ -36,7 +36,7 @@ class Serial(object):
             if(self.dev == "" or self.dev is None):
                 self.dev = self.findSerialDevices(self._hardwareID)[0]
 
-                print("Using COM Port: {}".format(self.dev))
+            print("Using COM Port: {}".format(self.dev))
 
             self._com = serial.Serial(self.dev, baudrate=self.baud, timeout=5)
 
@@ -59,7 +59,8 @@ class Serial(object):
 
 class Encoder(Serial):
     def __init__(self):
-        super().__init__(hardwareID="16C0:0483")
+        # super().__init__(hardwareID="16C0:0483")
+        super().__init__(dev='/dev/ttyACM0')
 
         self.read()  # read once to reset state
 
