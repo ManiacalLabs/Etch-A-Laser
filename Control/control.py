@@ -1,4 +1,5 @@
 from enum import Enum
+import threading
 
 # constrain to specific range
 def clamp(n, minn, maxn):
@@ -23,6 +24,7 @@ class Control(object):
         self.speed = speed
         self.init = init
         self.mode = Modes.JOG
+        self.lock = threading.Lock()
 
         self._x, self._y = 0,0  # internal use "high res" values
         self.x, self.y = 0,0  # values constrained to specific increments
@@ -37,6 +39,7 @@ class Control(object):
             self.max_x = self.cfg['$130']
             self.max_y = self.cfg['$131']
 
+        self.home()
         self.grbl.send(self.init)
         self.set_speed(self.speed)
         self.set_power(self.power)
@@ -45,19 +48,21 @@ class Control(object):
 
 
     def home(self):
-        print('Homing...')
-        self.x, self.y, _ = self.grbl.home()
-        self._x, self._y = self.x, self.y
-        print('Homing complete')
+        with self.lock:
+            print('Homing...')
+            self.x, self.y, _ = self.grbl.home()
+            self._x, self._y = self.x, self.y
+            print('Homing complete')
 
     def set_mode(self, mode):
         self.mode = mode
-        if self.mode == Modes.JOG:
-            self.grbl.send('M3')
-            self.__send_power(0.01)
-        else:
-            self.grbl.send('M4')
-            self.__send_power(self.power)
+        with self.lock:
+            if self.mode == Modes.JOG:
+                self.grbl.send('M3')
+                self.__send_power(0.01)
+            else:
+                self.grbl.send('M4')
+                self.__send_power(self.power)
 
     def toggle_mode(self):
         if self.mode == Modes.JOG:
@@ -67,15 +72,17 @@ class Control(object):
 
     def set_speed(self, speed):
         self.speed = speed
-        self.grbl.send('F{}'.format(self.speed))
+        with self.lock:
+            self.grbl.send('F{}'.format(self.speed))
 
     def __send_power(self, power):
         self.grbl.send('S{}'.format(1000*power))
 
     def set_power(self, power):
-        self.power = power
-        if self.mode == Modes.BURN:
-            self.__send_power(self.power)
+        with self.lock:
+            self.power = power
+            if self.mode == Modes.BURN:
+                self.__send_power(self.power)
 
     def check(self):
         # store previous values
@@ -99,4 +106,5 @@ class Control(object):
     def move(self):
         pos ='X{0:.2f}Y{1:.2f}'.format(self.x, self.y)
         cmd = 'G1 {}'.format(pos)
-        self.grbl.send(cmd)
+        with self.lock:
+            self.grbl.send(cmd)

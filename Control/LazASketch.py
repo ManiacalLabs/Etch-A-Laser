@@ -23,6 +23,9 @@ g = grbl()
 enc = Encoder()
 con = Control(g, enc, **MACHINE_CFG)
 
+backlight.set_graph(0)
+lcd.set_contrast(45)
+
 def high_sensitivity():
     """Override default high sensitivity mode.
     With 3mm acrylic it was too sensitive.
@@ -46,12 +49,12 @@ def handle_cancel(ch, evt):
 
 @nav.on(nav.UP)
 def handle_up(ch, evt):
-    update_power(con.power + 0.02)
+    update_power(con.power + 0.05)
 
 
 @nav.on(nav.DOWN)
 def handle_down(ch, evt):
-    update_power(con.power - 0.02)
+    update_power(con.power - 0.05)
 
 
 @nav.on(nav.LEFT)
@@ -68,9 +71,6 @@ def handle_right(ch, evt):
 def handle_button(ch, evt):
     con.toggle_mode()
     write_mode_line()
-
-backlight.set_graph(0)
-lcd.set_contrast(45)
 
 def pad_text(txt):
     if len(txt) < 16:
