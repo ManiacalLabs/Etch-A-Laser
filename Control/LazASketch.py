@@ -1,6 +1,7 @@
 import sys
 import time
 from time import sleep
+from decimal import Decimal
 
 import dothat.backlight as backlight
 import dothat.lcd as lcd
@@ -49,12 +50,12 @@ def handle_cancel(ch, evt):
 
 @nav.on(nav.UP)
 def handle_up(ch, evt):
-    update_power(con.power + 0.05)
+    update_power(con.power + Decimal(0.05))
 
 
 @nav.on(nav.DOWN)
 def handle_down(ch, evt):
-    update_power(con.power - 0.05)
+    update_power(con.power - Decimal(0.05))
 
 
 @nav.on(nav.LEFT)
@@ -96,7 +97,7 @@ def write_mode_line():
     lcd.write(pad_text(txt))
 
 def update_power(power):
-    con.set_power(clamp(power, 0.02, 1.0))
+    con.set_power(clamp(power, 0.05, 1.0))
     write_status_line()
 
 write_pos_line()

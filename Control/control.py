@@ -1,5 +1,6 @@
 from enum import Enum
 import threading
+from decimal import Decimal
 
 # constrain to specific range
 def clamp(n, minn, maxn):
@@ -20,7 +21,7 @@ class Control(object):
         self.enc = enc
         self.spm = spm
         self.inc = inc
-        self.power = power
+        self.power = Decimal(power)
         self.speed = speed
         self.init = init
         self.mode = Modes.JOG
@@ -58,8 +59,8 @@ class Control(object):
         self.mode = mode
         with self.lock:
             if self.mode == Modes.JOG:
-                self.grbl.send('M3')
-                self.__send_power(0.01)
+                self.grbl.send('M4')
+                self.__send_power(0.0)
             else:
                 self.grbl.send('M4')
                 self.__send_power(self.power)
@@ -76,9 +77,10 @@ class Control(object):
             self.grbl.send('F{}'.format(self.speed))
 
     def __send_power(self, power):
-        self.grbl.send('S{}'.format(1000*power))
+        self.grbl.send('S{}'.format(int(1000*power)))
 
     def set_power(self, power):
+        power = Decimal(power)
         with self.lock:
             self.power = power
             if self.mode == Modes.BURN:
@@ -106,5 +108,7 @@ class Control(object):
     def move(self):
         pos ='X{0:.2f}Y{1:.2f}'.format(self.x, self.y)
         cmd = 'G1 {}'.format(pos)
+        if self.mode == Modes.JOG:
+            cmd += ' S10' # always 1% for jog
         with self.lock:
             self.grbl.send(cmd)
