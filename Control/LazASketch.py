@@ -42,10 +42,11 @@ high_sensitivity()
 @nav.on(nav.CANCEL)
 def handle_cancel(ch, evt):
     lcd.set_cursor_position(0, 0)
-    lcd.write(pad_text('Homing...'))
-    con.home()
+    lcd.write(pad_text('Startup...'))
+    res = con.startup()
+    txt = 'Complete' if res else 'Failure'
     lcd.set_cursor_position(0, 0)
-    lcd.write(pad_text('Complete!'))
+    lcd.write(pad_text(txt))
 
 
 @nav.on(nav.UP)
@@ -93,7 +94,10 @@ def write_status_line():
 
 def write_mode_line():
     lcd.set_cursor_position(0, 2)
-    txt = 'MODE: {}'.format(con.mode.name)
+    if con.connected:
+        txt = 'MODE: {}'.format(con.mode.name)
+    else:
+        txt = 'DISCONNECTED'
     lcd.write(pad_text(txt))
 
 def update_power(power):
@@ -110,7 +114,7 @@ while 1:
     x %= 360
     backlight.sweep((360.0 - x) / 360.0)
 
-    if con.check():
+    if (not con.in_startup and con.connected) and con.check():
         con.move()
         write_pos_line()
         write_mode_line()

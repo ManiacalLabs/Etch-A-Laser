@@ -26,27 +26,46 @@ class Control(object):
         self.init = init
         self.mode = Modes.JOG
         self.lock = threading.Lock()
+        self.in_startup = False
 
         self._x, self._y = 0,0  # internal use "high res" values
         self.x, self.y = 0,0  # values constrained to specific increments
 
-        self.grbl.unlock()
-        self.cfg = self.grbl.get_config()
-        # self.max_x, self.max_y = 130,130
+        self.size = size
 
-        if size:
-            self.max_x, self.max_y = size[0], size[1]
-        else:
-            self.max_x = self.cfg['$130']
-            self.max_y = self.cfg['$131']
+        self.startup()
 
-        self.home()
-        self.grbl.send(self.init)
-        self.set_speed(self.speed)
-        self.set_power(self.power)
+    @property
+    def connected(self):
+        return self.grbl.connected
 
-        self.set_mode(Modes.JOG)
+    def startup(self):
+        try:
+            self.in_startup = True
+            if not self.grbl.connected:
+                self.grbl.startup()
 
+            if self.connected:
+                self.grbl.unlock()
+                self.cfg = self.grbl.get_config()
+                # self.max_x, self.max_y = 130,130
+
+                if self.size:
+                    self.max_x, self.max_y = self.size[0], self.size[1]
+                else:
+                    self.max_x = self.cfg['$130']
+                    self.max_y = self.cfg['$131']
+
+                self.home()
+                self.grbl.send(self.init)
+                self.set_speed(self.speed)
+                self.set_power(self.power)
+
+                self.set_mode(Modes.JOG)
+        finally:
+            self.in_startup = False
+
+        return self.connected
 
     def home(self):
         with self.lock:

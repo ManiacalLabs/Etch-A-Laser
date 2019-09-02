@@ -43,15 +43,25 @@ class grbl(Serial):
     def __init__(self, hardwareID="1A86:7523"):
         super().__init__(hardwareID=hardwareID)
 
-        # read and clear connection header
-        # Grbl 1.1f ['$' for help]
-        self.get_response()
+        self.startup()
+
+    def startup(self):
+        if not self.connected:
+            self.dev = None
+            self.connect()
+        if self.connected:
+            # read and clear connection header
+            # Grbl 1.1f ['$' for help]
+            self.get_response()
 
     def get_response(self):
         lines = []
         result = False
         while True:
-            l = self.readline().strip()
+            l = self.readline()
+            if l is None:
+                return False, []
+            l = l.strip()
             print('> {}'.format(l))
             if l.startswith('Grbl'):
                 # startup output, ignore
@@ -77,13 +87,15 @@ class grbl(Serial):
         self.write(cmd)
         r, l = self.get_response()
         if not r:
-            raise Exception('Error running {}, see console'.format(cmd))
+            print('Error running {}, see console'.format(cmd))
         return l
 
     def get_config(self):
         lines = self.send('$$')
         cfg = {}
         for l in lines:
+            if not l.startswith('$'):
+                continue
             print(l)
             k, v = l.split('=')
             cfg[k] = float(v)

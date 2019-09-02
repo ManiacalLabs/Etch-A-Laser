@@ -13,10 +13,9 @@ class Serial(object):
         self.baud = baud
         self._com = None
         self.dev = dev
+        self.connected = False
 
-        resp = self._connect()
-        if not resp:
-            raise Exception("Error connecting to serial device!")
+        self.connect()
 
     def __exit__(self, type, value, traceback):
         if self._com is not None:
@@ -31,10 +30,17 @@ class Serial(object):
 
         return foundDevices
 
+    def connect(self):
+        self.connected = self._connect()
+        return self.connected
+
     def _connect(self):
         try:
             if(self.dev == "" or self.dev is None):
-                self.dev = self.findSerialDevices(self._hardwareID)[0]
+                try:
+                    self.dev = self.findSerialDevices(self._hardwareID)[0]
+                except IndexError:
+                    return False
 
             print("Using COM Port: {}".format(self.dev))
 
@@ -49,13 +55,19 @@ class Serial(object):
             raise e
 
     def write(self, data, nl=True):
-        if nl and not data.endswith('\n'):
-            data += '\n'
-        self._com.write(data.encode('utf-8'))
+        try:
+            if nl and not data.endswith('\n'):
+                data += '\n'
+            self._com.write(data.encode('utf-8'))
+        except serial.serialutil.SerialException:
+            self.connected = False
 
     def readline(self):
-        resp = self._com.readline()
-        return resp.decode()
+        try:
+            resp = self._com.readline()
+            return resp.decode()
+        except serial.serialutil.SerialException:
+            self.connected = False
 
 class Encoder(Serial):
     def __init__(self):
