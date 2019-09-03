@@ -109,12 +109,18 @@ write_status_line()
 write_mode_line()
 
 x = 0
-while 1:
-    x += 0.25
-    x %= 360
-    backlight.sweep((360.0 - x) / 360.0)
 
-    if (not con.in_startup and con.connected) and con.check():
-        con.move()
-        write_pos_line()
-        write_mode_line()
+try:
+    while 1:
+        x += 0.25
+        x %= 360
+        backlight.sweep((360.0 - x) / 360.0)
+
+        if (not con.in_startup and con.connected) and con.check():
+            con.move()
+            write_pos_line()
+            write_mode_line()
+except KeyboardInterrupt:
+    backlight.set_graph(0)
+    lcd.clear()
+    backlight.off()
