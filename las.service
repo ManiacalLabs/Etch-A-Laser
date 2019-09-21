@@ -1,0 +1,11 @@
+[Unit]
+Description=Laz-A-Sketch Service
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=python3 /home/pi/Laz-A-Sketch/Control/LazASketch.py
+ExecStop=/usr/bin/sudo /usr/bin/pkill -2 -f LazASketch.py
+
+[Install]
+WantedBy=multi-user.target

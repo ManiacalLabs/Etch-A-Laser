@@ -112,9 +112,10 @@ x = 0
 
 try:
     while 1:
-        x += 0.25
-        x %= 360
-        backlight.sweep((360.0 - x) / 360.0)
+        # x += 0.25
+        # x %= 360
+        # backlight.sweep((360.0 - x) / 360.0)
+        backlight.rgb(255, 128, 0)
 
         if (not con.in_startup and con.connected) and con.check():
             con.move()

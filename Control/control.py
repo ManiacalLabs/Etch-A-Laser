@@ -11,7 +11,7 @@ def inc_round(v, inc):
     return round(v/inc)*inc
 
 class Modes(Enum):
-    BURN = 0
+    DRAW = 0
     JOG = 1
 
 
@@ -25,6 +25,7 @@ class Control(object):
         self.speed = speed
         self.init = init
         self.mode = Modes.JOG
+        self.laser_mode = False
         self.lock = threading.Lock()
         self.in_startup = False
 
@@ -56,6 +57,8 @@ class Control(object):
                     self.max_x = self.cfg['$130']
                     self.max_y = self.cfg['$131']
 
+                self.laser_mode = bool(self.cfg['$32'])
+
                 self.home()
                 self.grbl.send(self.init)
                 self.set_speed(self.speed)
@@ -74,19 +77,22 @@ class Control(object):
             self._x, self._y = self.x, self.y
             print('Homing complete')
 
+    def __FireCommand(self):
+        return 'M4' if self.laser_mode else 'M3'
+
     def set_mode(self, mode):
         self.mode = mode
         with self.lock:
             if self.mode == Modes.JOG:
-                self.grbl.send('M4')
+                self.grbl.send(self.__FireCommand())
                 self.__send_power(0.0)
             else:
-                self.grbl.send('M4')
+                self.grbl.send(self.__FireCommand())
                 self.__send_power(self.power)
 
     def toggle_mode(self):
         if self.mode == Modes.JOG:
-            self.set_mode(Modes.BURN)
+            self.set_mode(Modes.DRAW)
         else:
            self.set_mode(Modes.JOG)
 
@@ -102,7 +108,7 @@ class Control(object):
         power = Decimal(power)
         with self.lock:
             self.power = power
-            if self.mode == Modes.BURN:
+            if self.mode == Modes.DRAW:
                 self.__send_power(self.power)
 
     def check(self):
